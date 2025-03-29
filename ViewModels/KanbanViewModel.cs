@@ -94,7 +94,27 @@ namespace PlanifKanban.ViewModels
 
         public void AddTask(TaskModel task)
         {
-            TodoTasks.Add(task);
+            if (task == null || string.IsNullOrWhiteSpace(task.Title) || string.IsNullOrWhiteSpace(task.Client))
+                return;
+
+            // Clé d'identification : Titre + Client
+            var existingInTodo = TodoTasks.FirstOrDefault(t => t.Title == task.Title && t.Client == task.Client);
+            if (existingInTodo != null)
+            {
+                // Écraser la tâche existante
+                int index = TodoTasks.IndexOf(existingInTodo);
+                TodoTasks[index] = task;
+                return;
+            }
+
+            bool existsElsewhere = InProgressTasks.Any(t => t.Title == task.Title && t.Client == task.Client)
+                || TestingTasks.Any(t => t.Title == task.Title && t.Client == task.Client)
+                || DoneTasks.Any(t => t.Title == task.Title && t.Client == task.Client);
+
+            if (!existsElsewhere)
+            {
+                TodoTasks.Add(task);
+            }
         }
 
         private void ConfigureTodoSorting()
@@ -181,7 +201,7 @@ namespace PlanifKanban.ViewModels
 
                 if (saveModel.TodoTasks != null)
                     foreach (var task in saveModel.TodoTasks)
-                        viewModel.TodoTasks.Add(task);
+                        viewModel.AddTask(task);
 
                 if (saveModel.InProgressTasks != null)
                     foreach (var task in saveModel.InProgressTasks)

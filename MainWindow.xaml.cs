@@ -561,7 +561,7 @@ namespace PlanifKanban
                         // Ajouter les tâches importées à la liste "À faire"
                         foreach (var task in importedTasks)
                         {
-                            ViewModel.TodoTasks.Add(task);
+                            ViewModel.AddTask(task);
                         }
 
                         MessageBox.Show($"{importedTasks.Count} tâches ont été importées avec succès.",
