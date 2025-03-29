@@ -40,19 +40,17 @@
 
 - Windows 10/11
 - [.NET SDK 8.0+](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
-- Visual Studio 2022 ou plus récent avec workload WPF Desktop
-- (Facultatif) Git
 
 ### Clone du dépôt
 
 ```bash
-git clone https://github.com/votre-utilisateur/PlanifKanban.git
+git clone https://github.com/rodrigueantunes/PlanifKanban.git
 cd PlanifKanban
 ```
 
 ### Lancement
 
-Ouvrez le projet `.sln` avec Visual Studio et exécutez.
+Ouvrez la release et exécutez.
 
 ---
 
@@ -79,7 +77,7 @@ Ouvrez le projet `.sln` avec Visual Studio et exécutez.
 - Affiche toutes les tâches avec date prévue ou de début
 - Exclut les tâches finalisées avec une date passée
 - Double-clic sur une barre pour modifier la tâche
-- Sélectionnez l'échelle de temps (Heures, Jours, Semaines, Mois)
+- Sélectionnez l'échelle de temps (Jours, Semaines, Mois)
 
 ---
 
@@ -158,7 +156,7 @@ Ce projet est sous licence MIT
 ## ✉️ Contact
 
 Pour toute question, amélioration ou bug :  
-📧 `rodrigue@gmail.com`
+📧 `rodrigue.antunes@gmail.com`
 
 ---
 
