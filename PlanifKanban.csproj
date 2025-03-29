@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>kanban-icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="kanban-icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="ExcelDataReader" Version="3.7.0" />
+    <PackageReference Include="ExcelDataReader.DataSet" Version="3.7.0" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.3" />
+  </ItemGroup>
+
+</Project>

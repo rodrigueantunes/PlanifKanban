@@ -1,0 +1,558 @@
+﻿<Window x:Class="PlanifKanban.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PlanifKanban"
+        xmlns:conv="clr-namespace:PlanifKanban.Converters"
+        xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
+        mc:Ignorable="d"
+        Title="PlanifKanban" Height="800" Width="1200" Background="#F8F9FA">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="PrimaryColor" Color="#3B7CD4"/>
+        <SolidColorBrush x:Key="SecondaryColor" Color="#2C3E50"/>
+        <SolidColorBrush x:Key="AccentColor" Color="#2ECC71"/>
+        <SolidColorBrush x:Key="WarningColor" Color="#F39C12"/>
+        <SolidColorBrush x:Key="DangerColor" Color="#E74C3C"/>
+
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+        <conv:ZeroToVisibilityConverter x:Key="ZeroToVisibility"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- CollectionViewSource pour le tri -->
+        <CollectionViewSource x:Key="TodoTasksViewSource" Source="{Binding TodoTasks}">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="DueDate" Direction="Ascending"/>
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+
+        <CollectionViewSource x:Key="InProgressTasksViewSource" Source="{Binding InProgressTasks}">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="StartDate" Direction="Ascending"/>
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+
+        <CollectionViewSource x:Key="TestingTasksViewSource" Source="{Binding TestingTasks}">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="StartDate" Direction="Ascending"/>
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+
+        <CollectionViewSource x:Key="DoneTasksViewSource" Source="{Binding DoneTasks}">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="CompletionDate" Direction="Ascending"/>
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+
+        <ContextMenu x:Key="TaskContextMenu" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" Padding="2">
+            <ContextMenu.Resources>
+                <Style TargetType="MenuItem">
+                    <Setter Property="Padding" Value="10,8"/>
+                    <Setter Property="FontSize" Value="13"/>
+                    <Setter Property="Foreground" Value="{StaticResource SecondaryColor}"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F0F4F8"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+                <Style TargetType="Separator">
+                    <Setter Property="Background" Value="#E0E0E0"/>
+                    <Setter Property="Margin" Value="5,3"/>
+                    <Setter Property="Height" Value="1"/>
+                </Style>
+            </ContextMenu.Resources>
+
+            <MenuItem Header="Modifier la tâche" Click="ModifyTaskClick">
+                <MenuItem.Icon>
+                    <Path Data="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z M5 11.9V16h4.1l10.9-10.9-4.1-4.1L5 11.9z" 
+                  Fill="{StaticResource PrimaryColor}" Stretch="Uniform" Width="14" Height="14"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Supprimer la tâche" Click="DeleteTaskClick">
+                <MenuItem.Icon>
+                    <Path Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" 
+                  Fill="{StaticResource DangerColor}" Stretch="Uniform" Width="14" Height="14"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Déplacer vers :" IsEnabled="False" FontWeight="SemiBold"/>
+            <MenuItem Header="À faire" Click="SendToTodoClick" Margin="8,0,0,0">
+                <MenuItem.Icon>
+                    <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource PrimaryColor}"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="En cours" Click="SendToInProgressClick" Margin="8,0,0,0">
+                <MenuItem.Icon>
+                    <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource WarningColor}"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="En test" Click="SendToTestingClick" Margin="8,0,0,0">
+                <MenuItem.Icon>
+                    <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource AccentColor}"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Terminée" Click="SendToDoneClick" Margin="8,0,0,0">
+                <MenuItem.Icon>
+                    <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource SecondaryColor}"/>
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+        
+        <Style TargetType="Button" x:Key="ModernFlatButton">
+            <Setter Property="Background" Value="{StaticResource PrimaryColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,10"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#2980B9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ColumnHeaderStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource SecondaryColor}"/>
+            <Setter Property="Padding" Value="15,10"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+
+        <Style x:Key="TaskCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="3"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#CCCCCC" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TodoTaskCardStyle" TargetType="Border" BasedOn="{StaticResource TaskCardStyle}">
+            <Setter Property="BorderBrush" Value="#3B7CD4"/>
+        </Style>
+        <Style x:Key="InProgressTaskCardStyle" TargetType="Border" BasedOn="{StaticResource TaskCardStyle}">
+            <Setter Property="BorderBrush" Value="#F39C12"/>
+        </Style>
+        <Style x:Key="TestingTaskCardStyle" TargetType="Border" BasedOn="{StaticResource TaskCardStyle}">
+            <Setter Property="BorderBrush" Value="#2ECC71"/>
+        </Style>
+        <Style x:Key="DoneTaskCardStyle" TargetType="Border" BasedOn="{StaticResource TaskCardStyle}">
+            <Setter Property="BorderBrush" Value="#2C3E50"/>
+        </Style>
+
+        <Style TargetType="ListViewItem" x:Key="TaskItemStyle">
+            <Setter Property="ContextMenu" Value="{StaticResource TaskContextMenu}"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <EventSetter Event="MouseDoubleClick" Handler="OnTaskDoubleClick"/>
+            <EventSetter Event="PreviewMouseLeftButtonDown" Handler="ListView_PreviewMouseLeftButtonDown"/>
+            <EventSetter Event="PreviewMouseMove" Handler="ListView_PreviewMouseMove"/>
+        </Style>
+
+        <!-- Templates pour les tâches dans chaque colonne -->
+        <DataTemplate x:Key="TodoTaskCardTemplate">
+            <Border Style="{StaticResource TodoTaskCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Client}" Margin="0,5,0,0" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Description}" 
+                       Margin="0,5,0,0" 
+                       FontSize="11" 
+                       TextWrapping="Wrap"
+                       Foreground="#666666"
+                       MaxHeight="60"
+                       Visibility="{Binding ElementName=ShowDescriptionCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <!-- Dates -->
+                    <StackPanel Visibility="{Binding StartDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date début:" FontSize="10" Foreground="#666666" Margin="0,5,0,0"/>
+                        <TextBlock Text="{Binding StartDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding DueDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date prévue:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding DueDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding RequestedDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date demandée:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding RequestedDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding CompletionDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date finalisation:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding CompletionDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <!-- Temps prévu/réel (uniquement si > 0) -->
+                    <StackPanel Visibility="{Binding PlannedTimeDays, Converter={StaticResource ZeroToVisibility}}" Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="Prévu:" FontSize="10" Foreground="#666666"/>
+                        <TextBlock Text="{Binding PlannedTimeDays, StringFormat={}{0:0.#} j}" FontSize="10" Margin="5,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ActualTimeDays, Converter={StaticResource ZeroToVisibility}}" Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="Réel:" FontSize="10" Foreground="#666666"/>
+                        <TextBlock Text="{Binding ActualTimeDays, StringFormat={}{0:0.#} j}" FontSize="10" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="InProgressTaskCardTemplate">
+            <Border Style="{StaticResource InProgressTaskCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Client}" Margin="0,5,0,0" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Description}" 
+                       Margin="0,5,0,0" 
+                       FontSize="11" 
+                       TextWrapping="Wrap"
+                       Foreground="#666666"
+                       MaxHeight="60"
+                       Visibility="{Binding ElementName=ShowDescriptionCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <!-- Dates -->
+                    <StackPanel Visibility="{Binding StartDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date début:" FontSize="10" Foreground="#666666" Margin="0,5,0,0"/>
+                        <TextBlock Text="{Binding StartDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding DueDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date prévue:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding DueDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding RequestedDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date demandée:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding RequestedDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding CompletionDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date finalisation:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding CompletionDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <!-- Temps prévu/réel (uniquement si > 0) -->
+                    <StackPanel Visibility="{Binding PlannedTimeDays, Converter={StaticResource ZeroToVisibility}}" Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="Prévu:" FontSize="10" Foreground="#666666"/>
+                        <TextBlock Text="{Binding PlannedTimeDays, StringFormat={}{0:0.#} j}" FontSize="10" Margin="5,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ActualTimeDays, Converter={StaticResource ZeroToVisibility}}" Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="Réel:" FontSize="10" Foreground="#666666"/>
+                        <TextBlock Text="{Binding ActualTimeDays, StringFormat={}{0:0.#} j}" FontSize="10" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TestingTaskCardTemplate">
+            <Border Style="{StaticResource TestingTaskCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Client}" Margin="0,5,0,0" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Description}" 
+                       Margin="0,5,0,0" 
+                       FontSize="11" 
+                       TextWrapping="Wrap"
+                       Foreground="#666666"
+                       MaxHeight="60"
+                       Visibility="{Binding ElementName=ShowDescriptionCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <!-- Dates -->
+                    <StackPanel Visibility="{Binding StartDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date début:" FontSize="10" Foreground="#666666" Margin="0,5,0,0"/>
+                        <TextBlock Text="{Binding StartDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding DueDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date prévue:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding DueDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding RequestedDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date demandée:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding RequestedDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding CompletionDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date finalisation:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding CompletionDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <!-- Temps prévu/réel (uniquement si > 0) -->
+                    <StackPanel Visibility="{Binding PlannedTimeDays, Converter={StaticResource ZeroToVisibility}}" Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="Prévu:" FontSize="10" Foreground="#666666"/>
+                        <TextBlock Text="{Binding PlannedTimeDays, StringFormat={}{0:0.#} j}" FontSize="10" Margin="5,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ActualTimeDays, Converter={StaticResource ZeroToVisibility}}" Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="Réel:" FontSize="10" Foreground="#666666"/>
+                        <TextBlock Text="{Binding ActualTimeDays, StringFormat={}{0:0.#} j}" FontSize="10" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="DoneTaskCardTemplate">
+            <Border Style="{StaticResource DoneTaskCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Client}" Margin="0,5,0,0" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Description}" 
+                       Margin="0,5,0,0" 
+                       FontSize="11" 
+                       TextWrapping="Wrap"
+                       Foreground="#666666"
+                       MaxHeight="60"
+                       Visibility="{Binding ElementName=ShowDescriptionCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <!-- Dates -->
+                    <StackPanel Visibility="{Binding StartDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date début:" FontSize="10" Foreground="#666666" Margin="0,5,0,0"/>
+                        <TextBlock Text="{Binding StartDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding DueDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date prévue:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding DueDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding RequestedDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date demandée:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding RequestedDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding CompletionDate, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Date finalisation:" FontSize="10" Foreground="#666666" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding CompletionDate, StringFormat=dd/MM/yyyy}" FontSize="10"/>
+                    </StackPanel>
+
+                    <!-- Temps prévu/réel (uniquement si > 0) -->
+                    <StackPanel Visibility="{Binding PlannedTimeDays, Converter={StaticResource ZeroToVisibility}}" Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="Prévu:" FontSize="10" Foreground="#666666"/>
+                        <TextBlock Text="{Binding PlannedTimeDays, StringFormat={}{0:0.#} j}" FontSize="10" Margin="5,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ActualTimeDays, Converter={StaticResource ZeroToVisibility}}" Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock Text="Réel:" FontSize="10" Foreground="#666666"/>
+                        <TextBlock Text="{Binding ActualTimeDays, StringFormat={}{0:0.#} j}" FontSize="10" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Panneau de gauche avec boutons et options -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Boutons principaux -->
+            <StackPanel Grid.Row="0">
+                <Button Content="Ouvrir un Kanban" Click="OnOpenKanbanClick" Style="{StaticResource ModernFlatButton}"/>
+                <Button Content="Sauvegarder le Kanban" Click="OnSaveKanbanClick" Style="{StaticResource ModernFlatButton}"/>
+                <Button Content="Ajouter une Tâche" Click="OnAddTaskClick" Style="{StaticResource ModernFlatButton}"/>
+                <Button Content="Importer depuis Extranet XLS" Click="OnImportExcelClick" Style="{StaticResource ModernFlatButton}"/>
+                <Button Content="Afficher l'Ordonnancement" Click="OnShowScheduleClick" Style="{StaticResource ModernFlatButton}"/>
+                <Button Content="Afficher Gantt" Click="OnShowGanttClick" Style="{StaticResource ModernFlatButton}"/>
+            </StackPanel>
+
+            <!-- Séparateur -->
+            <Separator Grid.Row="1" Margin="5,15,5,10"/>
+
+            <!-- Options d'affichage -->
+            <Border Grid.Row="2" Background="#F0F4F8" CornerRadius="8" Margin="5,0,5,0" Padding="10" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="Options d'affichage" FontWeight="SemiBold" Foreground="{StaticResource SecondaryColor}" Margin="0,0,0,10"/>
+
+                    <!-- Case à cocher stylisée -->
+                    <CheckBox Name="ShowDescriptionCheckBox" 
+                              Content="Afficher les descriptions" 
+                              Margin="0,2" 
+                              Foreground="{StaticResource SecondaryColor}" 
+                              FontSize="13"
+                              IsChecked="False" 
+                              Checked="ShowDescriptionCheckBox_CheckedChanged" 
+                              Unchecked="ShowDescriptionCheckBox_CheckedChanged">
+                        <CheckBox.Template>
+                            <ControlTemplate TargetType="CheckBox">
+                                <StackPanel Orientation="Horizontal">
+                                    <Border x:Name="checkBoxBorder" 
+                                            Width="18" Height="18" 
+                                            BorderThickness="2" 
+                                            BorderBrush="{StaticResource PrimaryColor}" 
+                                            CornerRadius="3" 
+                                            Background="White"
+                                            VerticalAlignment="Center">
+                                        <Path x:Name="checkMark" 
+                                              Data="M1,5 L4,9 L9,1" 
+                                              Stroke="{StaticResource PrimaryColor}" 
+                                              StrokeThickness="2" 
+                                              Visibility="Collapsed"
+                                              VerticalAlignment="Center" 
+                                              HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <ContentPresenter Margin="8,0,0,0" 
+                                                      VerticalAlignment="Center" 
+                                                      HorizontalAlignment="Left" 
+                                                      RecognizesAccessKey="True"/>
+                                </StackPanel>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="true">
+                                        <Setter TargetName="checkMark" Property="Visibility" Value="Visible"/>
+                                        <Setter TargetName="checkBoxBorder" Property="Background" Value="#E6F0FF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="true">
+                                        <Setter TargetName="checkBoxBorder" Property="BorderBrush" Value="#2980B9"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </CheckBox.Template>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <UniformGrid Grid.Row="0" Columns="4">
+                <TextBlock Text="À Faire" Style="{StaticResource ColumnHeaderStyle}"/>
+                <TextBlock Text="En Cours" Style="{StaticResource ColumnHeaderStyle}"/>
+                <TextBlock Text="En Test" Style="{StaticResource ColumnHeaderStyle}"/>
+                <TextBlock Text="Terminée" Style="{StaticResource ColumnHeaderStyle}"/>
+            </UniformGrid>
+
+            <!-- Séparateurs verticaux fixes alignés avec le UniformGrid -->
+            <Grid Grid.Row="1" Panel.ZIndex="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Rectangle Grid.Column="0" Width="1" HorizontalAlignment="Right" Fill="#CCCCCC" />
+                <Rectangle Grid.Column="1" Width="1" HorizontalAlignment="Right" Fill="#CCCCCC" />
+                <Rectangle Grid.Column="2" Width="1" HorizontalAlignment="Right" Fill="#CCCCCC" />
+            </Grid>
+
+            <UniformGrid Grid.Row="1" Columns="4" Panel.ZIndex="1">
+                <!-- Colonne À Faire -->
+                <ListView Name="TodoList" ItemContainerStyle="{StaticResource TaskItemStyle}" 
+                          ItemsSource="{Binding Source={StaticResource TodoTasksViewSource}}" 
+                          ItemTemplate="{StaticResource TodoTaskCardTemplate}"
+                          AllowDrop="True" Drop="OnDropTodo" DragEnter="ListView_DragEnter" DragLeave="ListView_DragLeave" DragOver="ListView_DragOver">
+                    <ListView.Template>
+                        <ControlTemplate TargetType="{x:Type ListView}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ListView.Template>
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                </ListView>
+
+                <!-- Colonne En Cours -->
+                <ListView Name="InProgressList" ItemContainerStyle="{StaticResource TaskItemStyle}" 
+                          ItemsSource="{Binding Source={StaticResource InProgressTasksViewSource}}" 
+                          ItemTemplate="{StaticResource InProgressTaskCardTemplate}"
+                          AllowDrop="True" Drop="OnDropInProgress" DragEnter="ListView_DragEnter" DragLeave="ListView_DragLeave" DragOver="ListView_DragOver">
+                    <ListView.Template>
+                        <ControlTemplate TargetType="{x:Type ListView}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ListView.Template>
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                </ListView>
+
+                <!-- Colonne En Test -->
+                <ListView Name="TestingList" ItemContainerStyle="{StaticResource TaskItemStyle}" 
+                          ItemsSource="{Binding Source={StaticResource TestingTasksViewSource}}" 
+                          ItemTemplate="{StaticResource TestingTaskCardTemplate}"
+                          AllowDrop="True" Drop="OnDropTesting" DragEnter="ListView_DragEnter" DragLeave="ListView_DragLeave" DragOver="ListView_DragOver">
+                    <ListView.Template>
+                        <ControlTemplate TargetType="{x:Type ListView}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ListView.Template>
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                </ListView>
+
+                <!-- Colonne Terminée -->
+                <ListView Name="DoneList" ItemContainerStyle="{StaticResource TaskItemStyle}" 
+                          ItemsSource="{Binding Source={StaticResource DoneTasksViewSource}}" 
+                          ItemTemplate="{StaticResource DoneTaskCardTemplate}"
+                          AllowDrop="True" Drop="OnDropDone" DragEnter="ListView_DragEnter" DragLeave="ListView_DragLeave" DragOver="ListView_DragOver">
+                    <ListView.Template>
+                        <ControlTemplate TargetType="{x:Type ListView}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ListView.Template>
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                </ListView>
+            </UniformGrid>
+        </Grid>
+    </Grid>
+</Window>

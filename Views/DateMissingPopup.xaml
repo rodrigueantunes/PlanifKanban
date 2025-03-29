@@ -1,0 +1,108 @@
+﻿<Window x:Class="PlanifKanban.Views.DateMissingPopup"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Dates Manquantes" Height="550" Width="600"
+        Background="#F8F9FA"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- Récupération des styles de l'application -->
+        <SolidColorBrush x:Key="PrimaryColor" Color="#3B7CD4"/>
+        <SolidColorBrush x:Key="SecondaryColor" Color="#2C3E50"/>
+
+        <!-- Style moderne pour les boutons -->
+        <Style TargetType="Button" x:Key="ModernFlatButton">
+            <Setter Property="Background" Value="{StaticResource PrimaryColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,10"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#2980B9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Style pour les zones de texte -->
+        <Style TargetType="TextBlock" x:Key="LabelStyle">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{StaticResource SecondaryColor}"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- Style pour les DatePicker -->
+        <Style TargetType="DatePicker" x:Key="DatePickerStyle">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="40"/>
+        </Style>
+    </Window.Resources>
+
+    <Border BorderBrush="#E0E0E0" BorderThickness="0" Margin="20" CornerRadius="10">
+        <Border.Effect>
+            <DropShadowEffect Color="#CCCCCC" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
+        </Border.Effect>
+
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Titre -->
+            <TextBlock x:Name="MissingDatesText" 
+                       Text="Veuillez renseigner les dates manquantes" 
+                       FontSize="20" 
+                       FontWeight="Bold"
+                       Foreground="{StaticResource SecondaryColor}"
+                       Margin="0,0,0,20" 
+                       HorizontalAlignment="Center"/>
+
+            <!-- Formulaire -->
+            <StackPanel Grid.Row="1">
+                <TextBlock Text="Date demandée" Style="{StaticResource LabelStyle}"/>
+                <DatePicker Name="RequestedDatePicker" Style="{StaticResource DatePickerStyle}"/>
+
+                <TextBlock Text="Date prévue" Style="{StaticResource LabelStyle}"/>
+                <DatePicker Name="DueDatePicker" Style="{StaticResource DatePickerStyle}"/>
+
+                <TextBlock Text="Date de début" Style="{StaticResource LabelStyle}"/>
+                <DatePicker Name="StartDatePicker" Style="{StaticResource DatePickerStyle}"/>
+
+                <!-- Groupe de date de finalisation -->
+                <StackPanel x:Name="CompletionDateGroup">
+                    <TextBlock Text="Date de finalisation" Style="{StaticResource LabelStyle}"/>
+                    <DatePicker Name="CompletionDatePicker" Style="{StaticResource DatePickerStyle}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Boutons -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,30,0,0">
+                <Button Content="Valider" Click="OnValidateClick" Style="{StaticResource ModernFlatButton}"/>
+                <Button Content="Annuler" Click="OnCancelClick" Style="{StaticResource ModernFlatButton}" Background="#95A5A6"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

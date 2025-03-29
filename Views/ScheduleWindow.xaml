@@ -1,0 +1,463 @@
+﻿<Window x:Class="PlanifKanban.Views.ScheduleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PlanifKanban.Views"
+        xmlns:conv="clr-namespace:PlanifKanban.Converters"
+        mc:Ignorable="d"
+        Title="Ordonnancement des Tâches" Height="700" Width="1000" Background="#F8F9FA">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="PrimaryColor" Color="#3B7CD4"/>
+        <SolidColorBrush x:Key="SecondaryColor" Color="#2C3E50"/>
+        <SolidColorBrush x:Key="AccentColor" Color="#2ECC71"/>
+        <SolidColorBrush x:Key="WarningColor" Color="#F39C12"/>
+        <SolidColorBrush x:Key="DangerColor" Color="#E74C3C"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+        <conv:NullToEmptyStringConverter x:Key="NullToEmptyStringConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style x:Key="ModernFlatButton" TargetType="Button">
+    <Setter Property="Background" Value="{StaticResource PrimaryColor}"/>
+    <Setter Property="Foreground" Value="White"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="10,5"/>
+    <Setter Property="Margin" Value="5,0"/>
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="Button">
+                <Border Background="{TemplateBinding Background}" 
+                        CornerRadius="5" 
+                        Padding="{TemplateBinding Padding}">
+                    <ContentPresenter HorizontalAlignment="Center" 
+                                      VerticalAlignment="Center"/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#2980B9"/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+        <!-- Style pour les en-têtes de colonne -->
+        <Style x:Key="HeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Background" Value="{StaticResource SecondaryColor}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Style pour les boutons de tri -->
+        <Style x:Key="SortButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter Grid.Column="0" VerticalAlignment="Center"/>
+                            <Path x:Name="SortIcon" Grid.Column="1" Margin="5,0,0,0" 
+                                  Width="8" Height="8" Fill="White"
+                                  Data="M4,0 L8,6 L0,6 Z" Visibility="Collapsed"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="#E0E0E0"/>
+                            </Trigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Tag}" Value="Ascending">
+                                <Setter TargetName="SortIcon" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="SortIcon" Property="Data" Value="M4,0 L8,6 L0,6 Z"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Tag}" Value="Descending">
+                                <Setter TargetName="SortIcon" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="SortIcon" Property="Data" Value="M4,6 L8,0 L0,0 Z"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Style pour les cases à cocher stylisées -->
+        <Style x:Key="ModernCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource SecondaryColor}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="checkBoxBorder" 
+                                    Width="18" Height="18" 
+                                    BorderThickness="2" 
+                                    BorderBrush="{StaticResource PrimaryColor}" 
+                                    CornerRadius="3" 
+                                    Background="White"
+                                    VerticalAlignment="Center">
+                                <Path x:Name="checkMark" 
+                                      Data="M1,5 L4,9 L9,1" 
+                                      Stroke="{StaticResource PrimaryColor}" 
+                                      StrokeThickness="2" 
+                                      Visibility="Collapsed"
+                                      VerticalAlignment="Center" 
+                                      HorizontalAlignment="Center"/>
+                            </Border>
+                            <ContentPresenter Margin="8,0,0,0" 
+                                              VerticalAlignment="Center" 
+                                              HorizontalAlignment="Left" 
+                                              RecognizesAccessKey="True"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="true">
+                                <Setter TargetName="checkMark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="checkBoxBorder" Property="Background" Value="#E6F0FF"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="checkBoxBorder" Property="BorderBrush" Value="#2980B9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Style pour les items de la liste -->
+        <Style x:Key="TaskRowStyle" TargetType="DataGridRow">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F5F9FF"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E6F0FF"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Style pour les cellules de la liste -->
+        <Style x:Key="TaskCellStyle" TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{StaticResource SecondaryColor}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Options d'affichage -->
+        <Border Grid.Row="0" Background="#F0F4F8" CornerRadius="8" Padding="15,10" Margin="0,0,0,15">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Options d'affichage" FontWeight="SemiBold" Foreground="{StaticResource SecondaryColor}" VerticalAlignment="Center" Margin="0,0,20,0"/>
+
+                <CheckBox Name="ShowTodoTasksCheckBox" 
+                          Content="Afficher les tâches à faire" 
+                          Margin="0,0,20,0"
+                          Style="{StaticResource ModernCheckBoxStyle}"
+                          IsChecked="False"
+                          Checked="ShowTodoTasksCheckBox_CheckedChanged" 
+                          Unchecked="ShowTodoTasksCheckBox_CheckedChanged"/>
+
+                <CheckBox Name="ShowCompletedTasksCheckBox" 
+                          Content="Afficher les tâches terminées" 
+                          Margin="0,0,20,0"
+                          Style="{StaticResource ModernCheckBoxStyle}"
+                          IsChecked="False"
+                          Checked="ShowCompletedTasksCheckBox_CheckedChanged" 
+                          Unchecked="ShowCompletedTasksCheckBox_CheckedChanged"/>
+                <Button Content="Afficher Gantt" 
+                        Click="OnShowGanttClick"
+                        Style="{StaticResource ModernFlatButton}"
+                        Margin="20,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Titre Liste active -->
+        <Border Grid.Row="1" Background="{StaticResource WarningColor}" Padding="15,10" CornerRadius="5,5,0,0">
+            <TextBlock Text="Tâches prévu/encours ou en test" FontSize="16" FontWeight="SemiBold" Foreground="White"/>
+        </Border>
+
+        <!-- Liste des tâches actives -->
+        <DataGrid Grid.Row="2" Name="ActiveTasksGrid" 
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False" 
+                  CanUserDeleteRows="False"
+                  CanUserResizeRows="False"
+                  CanUserReorderColumns="True"
+                  SelectionMode="Single"
+                  HeadersVisibility="Column"
+                  Background="White"
+                  BorderThickness="1"
+                  BorderBrush="#E0E0E0"
+                  RowStyle="{StaticResource TaskRowStyle}"
+                  CellStyle="{StaticResource TaskCellStyle}"
+                  MouseDoubleClick="ActiveTasksGrid_MouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Client" Binding="{Binding Client}" Width="120">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Client" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding ActiveClientSortDirection}" CommandParameter="Client"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Titre" Binding="{Binding Title}" Width="180">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Titre" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding ActiveTitleSortDirection}" CommandParameter="Title"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Description" Width="*" Binding="{Binding Description}">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Description" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding ActiveDescriptionSortDirection}" CommandParameter="Description"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date Demandée" Binding="{Binding RequestedDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date Demandée" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding ActiveRequestedDateSortDirection}" CommandParameter="RequestedDate"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date Prévue" Binding="{Binding DueDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date Prévue" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding ActiveDueDateSortDirection}" CommandParameter="DueDate"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date de Début" Binding="{Binding StartDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date de Début" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding ActiveStartDateSortDirection}" CommandParameter="StartDate"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date pour tri" Binding="{Binding SortDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date pour tri" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding ActiveSortDateSortDirection}" CommandParameter="SortDate"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Temps prévu (j)" Binding="{Binding PlannedTimeDays, StringFormat={}{0:0.#}}" Width="90">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Temps prévu (j)" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding ActivePlannedTimeDaysSortDirection}" CommandParameter="PlannedTimeDays"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Section des tâches à faire - Visible seulement si la case à cocher est activée -->
+        <Border Grid.Row="3" Background="{StaticResource PrimaryColor}" Padding="15,10" CornerRadius="5,5,0,0" Margin="0,20,0,0"
+                Visibility="{Binding ElementName=ShowTodoTasksCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock Text="Liste des tâches à faire" FontSize="16" FontWeight="SemiBold" Foreground="White"/>
+        </Border>
+
+        <!-- Liste des tâches à faire -->
+        <DataGrid Grid.Row="4" Name="TodoTasksGrid" 
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False" 
+                  CanUserDeleteRows="False"
+                  CanUserResizeRows="False"
+                  CanUserReorderColumns="True"
+                  SelectionMode="Single"
+                  HeadersVisibility="Column"
+                  Background="White"
+                  BorderThickness="1"
+                  BorderBrush="#E0E0E0"
+                  RowStyle="{StaticResource TaskRowStyle}"
+                  CellStyle="{StaticResource TaskCellStyle}"
+                  MouseDoubleClick="TodoTasksGrid_MouseDoubleClick"
+                  Visibility="{Binding ElementName=ShowTodoTasksCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Client" Binding="{Binding Client}" Width="120">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Client" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding TodoClientSortDirection}" CommandParameter="Client-Todo"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Titre" Binding="{Binding Title}" Width="180">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Titre" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding TodoTitleSortDirection}" CommandParameter="Title-Todo"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Description" Width="*" Binding="{Binding Description}">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Description" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding TodoDescriptionSortDirection}" CommandParameter="Description-Todo"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date Demandée" Binding="{Binding RequestedDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date Demandée" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding TodoRequestedDateSortDirection}" CommandParameter="RequestedDate-Todo"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Section des tâches terminées - Visible seulement si la case à cocher est activée -->
+        <Border Grid.Row="5" Background="{StaticResource AccentColor}" Padding="15,10" CornerRadius="5,5,0,0" Margin="0,20,0,0"
+                Visibility="{Binding ElementName=ShowCompletedTasksCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock Text="Liste des tâches terminées" FontSize="16" FontWeight="SemiBold" Foreground="White"/>
+        </Border>
+
+        <!-- Liste des tâches terminées -->
+        <DataGrid Grid.Row="6" Name="CompletedTasksGrid" 
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False" 
+                  CanUserDeleteRows="False"
+                  CanUserResizeRows="False"
+                  CanUserReorderColumns="True"
+                  SelectionMode="Single"
+                  HeadersVisibility="Column"
+                  Background="White"
+                  BorderThickness="1"
+                  BorderBrush="#E0E0E0"
+                  RowStyle="{StaticResource TaskRowStyle}"
+                  CellStyle="{StaticResource TaskCellStyle}"
+                  MouseDoubleClick="CompletedTasksGrid_MouseDoubleClick"
+                  Visibility="{Binding ElementName=ShowCompletedTasksCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Client" Binding="{Binding Client}" Width="120">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Client" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedClientSortDirection}" CommandParameter="Client-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Titre" Binding="{Binding Title}" Width="180">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Titre" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedTitleSortDirection}" CommandParameter="Title-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Description" Width="*" Binding="{Binding Description}">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Description" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedDescriptionSortDirection}" CommandParameter="Description-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date Demandée" Binding="{Binding RequestedDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date Demandée" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedRequestedDateSortDirection}" CommandParameter="RequestedDate-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date Prévue" Binding="{Binding DueDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date Prévue" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedDueDateSortDirection}" CommandParameter="DueDate-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date de Début" Binding="{Binding StartDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date de Début" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedStartDateSortDirection}" CommandParameter="StartDate-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date pour tri" Binding="{Binding SortDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date pour tri" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedSortDateSortDirection}" CommandParameter="SortDate-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Temps prévu (j)" Binding="{Binding PlannedTimeDays, StringFormat={}{0:0.#}}" Width="90">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Temps prévu (j)" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedPlannedTimeDaysSortDirection}" CommandParameter="PlannedTimeDays-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Temps réel (j)" Binding="{Binding ActualTimeDays, StringFormat={}{0:0.#}}" Width="90">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Temps réel (j)" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedActualTimeDaysSortDirection}" CommandParameter="ActualTimeDays-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Date de Finalisation" Binding="{Binding CompletionDate, StringFormat=dd/MM/yyyy}" Width="110">
+                    <DataGridTextColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <Button Content="Date de Finalisation" Style="{StaticResource SortButtonStyle}" Click="SortButton_Click" Tag="{Binding CompletedCompletionDateSortDirection}" CommandParameter="CompletionDate-Completed"/>
+                        </DataTemplate>
+                    </DataGridTextColumn.HeaderTemplate>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
