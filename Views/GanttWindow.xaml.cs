@@ -421,6 +421,7 @@ namespace PlanifKanban.Views
             return standardOverlap || dueDateOverlap;
         }
 
+        // Voici la méthode CreateGanttTask modifiée pour corriger les problèmes d'affichage
         private GanttTaskViewModel CreateGanttTask(TaskModel task)
         {
             DateTime startDate;
@@ -442,7 +443,7 @@ namespace PlanifKanban.Views
             }
             else
             {
-                // Si aucune tâche n'est spécifiée, cette tâche ne devrait pas être dans le Gantt
+                // Si aucune date n'est spécifiée, cette tâche ne devrait pas être dans le Gantt
                 return null;
             }
 
@@ -458,37 +459,74 @@ namespace PlanifKanban.Views
             // Calculer les paramètres de positionnement
             double pixelsPerUnit = GetPixelsPerUnit();
 
-            // Avec le mode jours, calculer le nombre de jours ouvrables entre _minDate et startDate
-            int businessDaysFromStart = 0;
+            // Récupérer le mode d'échelle de temps sélectionné
             var selectedScale = TimeScaleComboBox.SelectedItem as ComboBoxItem;
-            if (selectedScale?.Content?.ToString() == "Jours")
-            {
-                // Compter uniquement les jours ouvrables entre _minDate et startDate
-                businessDaysFromStart = WorkdayCalculator.GetWorkdayCount(_minDate, startDate);
-            }
-            else
-            {
-                // Pour les autres échelles, utiliser le calcul original
-                businessDaysFromStart = (int)(startDate - _minDate).TotalDays;
-            }
+            string timeScale = selectedScale?.Content?.ToString() ?? "Jours";
 
-            double offset = Math.Max(businessDaysFromStart * pixelsPerUnit, 0); // Éviter les valeurs négatives
+            // Calcul de l'offset (position X) selon l'échelle de temps
+            double offset = 0;
+
+            switch (timeScale)
+            {
+                case "Jours":
+                    // Compter uniquement les jours ouvrables entre _minDate et startDate
+                    int businessDaysFromStart = WorkdayCalculator.GetWorkdayCount(_minDate, startDate);
+                    offset = Math.Max(businessDaysFromStart * pixelsPerUnit, 0);
+                    break;
+
+                case "Semaines":
+                    // Aligner sur les semaines (lundi)
+                    DateTime startOfWeekMin = _minDate.Date.AddDays(-(int)_minDate.DayOfWeek + 1);
+                    if (_minDate.DayOfWeek == DayOfWeek.Sunday) startOfWeekMin = _minDate.Date.AddDays(-6);
+
+                    DateTime startOfWeekTask = startDate.Date.AddDays(-(int)startDate.DayOfWeek + 1);
+                    if (startDate.DayOfWeek == DayOfWeek.Sunday) startOfWeekTask = startDate.Date.AddDays(-6);
+
+                    double weeksDiff = Math.Floor((startOfWeekTask - startOfWeekMin).TotalDays / 7.0);
+                    offset = Math.Max(weeksDiff * pixelsPerUnit, 0);
+                    break;
+
+                case "Mois":
+                    // Aligner sur les mois
+                    int monthsFromStart = ((startDate.Year - _minDate.Year) * 12) + (startDate.Month - _minDate.Month);
+                    offset = Math.Max(monthsFromStart * pixelsPerUnit, 0);
+                    break;
+
+                default:
+                    // Jours calendaires par défaut
+                    double daysDiff = (startDate - _minDate).TotalDays;
+                    offset = Math.Max(daysDiff * pixelsPerUnit, 0);
+                    break;
+            }
 
             // Assurer une durée minimale pour la visibilité
             double durationDays = Math.Max(task.PlannedTimeDays, 1.0);
-
-            // Si nous sommes en mode jours, utiliser seulement les jours ouvrables pour la durée
             double duration;
-            if (selectedScale?.Content?.ToString() == "Jours")
+
+            switch (timeScale)
             {
-                // La durée visuellement représente uniquement les jours ouvrables
-                duration = durationDays * pixelsPerUnit;
-            }
-            else
-            {
-                // Pour les autres échelles, convertir les jours ouvrables en jours calendaires
-                int calendarDays = WorkdayCalculator.WorkdaysToCalendarDays(startDate, (int)Math.Ceiling(durationDays));
-                duration = calendarDays * pixelsPerUnit;
+                case "Jours":
+                    // La durée visuellement représente uniquement les jours ouvrables
+                    duration = durationDays * pixelsPerUnit;
+                    break;
+
+                case "Semaines":
+                    // Convertir la durée en semaines
+                    double weeksPortion = Math.Ceiling(durationDays / 5.0); // 5 jours ouvrables par semaine
+                    duration = weeksPortion * pixelsPerUnit;
+                    break;
+
+                case "Mois":
+                    // Convertir la durée en mois
+                    double monthsPortion = Math.Ceiling(durationDays / 21.0); // ~21 jours ouvrables par mois
+                    duration = monthsPortion * pixelsPerUnit;
+                    break;
+
+                default:
+                    // Utiliser des jours calendaires
+                    int calendarDays = WorkdayCalculator.WorkdaysToCalendarDays(startDate, (int)Math.Ceiling(durationDays));
+                    duration = calendarDays * pixelsPerUnit;
+                    break;
             }
 
             // Déterminer le type de tâche (en cours ou date prévue)
@@ -507,10 +545,11 @@ namespace PlanifKanban.Views
                 Duration = duration,
                 StartOffset = offset,
                 OriginalTask = task,
-                IsInProgress = isInProgress  // Nouvelle propriété pour indiquer si la tâche est en cours
+                IsInProgress = isInProgress  // Propriété pour indiquer si la tâche est en cours
             };
         }
 
+        // Mettre également à jour la méthode ConfigureTimeScale pour améliorer l'affichage des semaines
         private void ConfigureTimeScale()
         {
             if (GanttTasks == null || !GanttTasks.Any())
@@ -542,10 +581,12 @@ namespace PlanifKanban.Views
                     break;
 
                 case "Semaines":
-                    // Utiliser le format de semaine ISO (numéro de semaine dans l'année)
-                    for (var date = _minDate.Date.AddDays(-(int)_minDate.DayOfWeek + 1); // Commencer lundi
-                         date <= _maxDate.Date;
-                         date = date.AddDays(7))
+                    // Utiliser le format de semaine plus explicite
+                    // Commencer par un lundi
+                    DateTime startWeek = _minDate.Date.AddDays(-(int)_minDate.DayOfWeek + 1);
+                    if (_minDate.DayOfWeek == DayOfWeek.Sunday) startWeek = _minDate.Date.AddDays(-6);
+
+                    for (var date = startWeek; date <= _maxDate.Date; date = date.AddDays(7))
                     {
                         // Obtenir le numéro de semaine selon ISO 8601
                         System.Globalization.Calendar cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
@@ -554,7 +595,8 @@ namespace PlanifKanban.Views
                             System.Globalization.CalendarWeekRule.FirstFourDayWeek,
                             DayOfWeek.Monday);
 
-                        days.Add($"S{weekNum}");
+                        // Format plus détaillé: S12-2025
+                        days.Add($"S{weekNum}-{date.Year}");
                     }
                     break;
 
@@ -562,11 +604,21 @@ namespace PlanifKanban.Views
                     for (var date = new DateTime(_minDate.Year, _minDate.Month, 1);
                          date <= _maxDate;
                          date = date.AddMonths(1))
-                        days.Add(date.ToString("MM/yyyy"));
+                    {
+                        // Utiliser un format plus lisible pour les mois, avec le nom du mois en français
+                        string monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(date.Month);
+                        // Capitaliser la première lettre
+                        if (!string.IsNullOrEmpty(monthName) && monthName.Length > 1)
+                        {
+                            monthName = char.ToUpper(monthName[0]) + monthName.Substring(1);
+                        }
+
+                        days.Add($"{monthName} {date.Year}");
+                    }
                     break;
             }
 
-            // Ajuster la largeur du canvas de Gantt en fonction du nombre de jours
+            // Ajuster la largeur du canvas de Gantt en fonction du nombre d'unités de temps
             double pixelsPerUnit = GetPixelsPerUnit();
             double totalWidth = days.Count * pixelsPerUnit;
 
@@ -579,7 +631,19 @@ namespace PlanifKanban.Views
             // Mettre à jour la valeur Tag pour la largeur des colonnes de l'échelle de temps
             TimeScaleItemsControl.Tag = pixelsPerUnit;
 
+            // Mettre à jour l'ItemsSource
             TimeScaleItemsControl.ItemsSource = days;
+
+            // Adapter la largeur des colonnes dans le template
+            var itemTemplate = TimeScaleItemsControl.ItemTemplate;
+            if (itemTemplate != null && itemTemplate.LoadContent() is FrameworkElement element)
+            {
+                Border border = element as Border;
+                if (border != null)
+                {
+                    border.Width = pixelsPerUnit;
+                }
+            }
         }
 
         private void TimeScaleComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
