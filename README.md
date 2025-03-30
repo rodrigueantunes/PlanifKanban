@@ -192,7 +192,6 @@ Ce projet est sous licence MIT
 
 ## 🙌 Remerciements
 
-- 💙 Merci à tous ceux qui ont testé et fait des retours.
 - ✨ Ce projet est né pour améliorer l'organisation des équipes techniques internes.
 - 🔧 Contributeurs spéciaux ayant aidé à améliorer les fonctionnalités Gantt.
 
