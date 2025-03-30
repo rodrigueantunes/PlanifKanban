@@ -8,6 +8,9 @@ using System.Windows.Data;
 using PlanifKanban.Models;
 using PlanifKanban.ViewModels;
 using System.Windows.Threading;
+using Microsoft.Win32;
+using ClosedXML.Excel;
+using System.IO;
 
 namespace PlanifKanban.Views
 {
@@ -46,6 +49,14 @@ namespace PlanifKanban.Views
                 // Une tâche est "en cours ou en test" uniquement si elle a une date de début OU une date prévue
                 // et qu'elle n'est pas encore terminée
                 return (StartDate.HasValue || DueDate.HasValue) && !CompletionDate.HasValue;
+            }
+        }
+
+        public bool HasRequestedDate
+        {
+            get
+            {
+                return RequestedDate.HasValue;
             }
         }
 
@@ -317,8 +328,10 @@ namespace PlanifKanban.Views
             _activeTasksView.SortDescriptions.Clear();
             _activeTasksView.SortDescriptions.Add(new SortDescription("SortDate", ListSortDirection.Ascending));
 
-            // Tri par défaut pour les tâches à faire (par client)
+            // Tri par défaut pour les tâches à faire (d'abord celles avec date demandée, puis par date au plus tôt)
             _todoTasksView.SortDescriptions.Clear();
+            _todoTasksView.SortDescriptions.Add(new SortDescription("HasRequestedDate", ListSortDirection.Descending));
+            _todoTasksView.SortDescriptions.Add(new SortDescription("RequestedDate", ListSortDirection.Ascending));
             _todoTasksView.SortDescriptions.Add(new SortDescription("Client", ListSortDirection.Ascending));
 
             // Tri par défaut pour les tâches terminées (par date de finalisation)
@@ -623,6 +636,161 @@ namespace PlanifKanban.Views
             var ganttWindow = new GanttWindow(_viewModel);
             ganttWindow.Owner = this;
             ganttWindow.ShowDialog();
+        }
+
+        private void OnExportExcelClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Créer une boîte de dialogue pour choisir l'emplacement du fichier
+                SaveFileDialog saveFileDialog = new SaveFileDialog
+                {
+                    Filter = "Excel Files (*.xlsx)|*.xlsx",
+                    DefaultExt = "xlsx",
+                    Title = "Enregistrer le fichier Excel"
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    using (var workbook = new XLWorkbook())
+                    {
+                        // Créer les trois feuilles de calcul
+                        var worksheetTodo = workbook.Worksheets.Add("Tâches à faire");
+                        var worksheetActive = workbook.Worksheets.Add("Tâches prévu-encours-test");
+                        var worksheetCompleted = workbook.Worksheets.Add("Tâches terminées");
+
+                        // Couleurs correspondant aux styles de l'interface
+                        var primaryColor = "#3B7CD4";
+                        var secondaryColor = "#2C3E50";
+                        var warningColor = "#F39C12";
+                        var accentColor = "#2ECC71";
+
+                        // Exporter les tâches à faire
+                        ExportDataGridToWorksheet(TodoTasksGrid, worksheetTodo, primaryColor);
+
+                        // Exporter les tâches actives (prévu/encours ou en test)
+                        ExportDataGridToWorksheet(ActiveTasksGrid, worksheetActive, warningColor);
+
+                        // Exporter les tâches terminées
+                        ExportDataGridToWorksheet(CompletedTasksGrid, worksheetCompleted, accentColor);
+
+                        // Sauvegarder le fichier Excel
+                        workbook.SaveAs(saveFileDialog.FileName);
+                    }
+
+                    MessageBox.Show("Exportation réussie !", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erreur lors de l'exportation : {ex.Message}", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportDataGridToWorksheet(DataGrid dataGrid, IXLWorksheet worksheet, string headerColor)
+        {
+            // Si le DataGrid n'est pas visible ou ne contient pas de données, ne rien faire
+            if (dataGrid.Visibility != Visibility.Visible || dataGrid.Items.Count == 0)
+                return;
+
+            int rowIndex = 1;
+            int colIndex = 1;
+
+            // Ajouter les en-têtes des colonnes
+            foreach (var column in dataGrid.Columns)
+            {
+                if (column is DataGridTextColumn textColumn)
+                {
+                    var header = "";
+                    if (textColumn.Header is string headerString)
+                    {
+                        header = headerString;
+                    }
+                    else if (textColumn.HeaderTemplate != null)
+                    {
+                        // Extraire le contenu du bouton dans le HeaderTemplate
+                        var headerContent = textColumn.HeaderTemplate.LoadContent();
+                        if (headerContent is Button button)
+                        {
+                            header = button.Content.ToString();
+                        }
+                    }
+
+                    worksheet.Cell(rowIndex, colIndex).Value = header;
+
+                    // Formater l'en-tête
+                    var headerCell = worksheet.Cell(rowIndex, colIndex);
+                    headerCell.Style.Font.Bold = true;
+                    headerCell.Style.Font.FontColor = XLColor.White;
+                    headerCell.Style.Fill.BackgroundColor = XLColor.FromHtml(headerColor);
+                    headerCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    headerCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                    colIndex++;
+                }
+            }
+
+            // Ajouter les données des lignes
+            foreach (var item in dataGrid.Items)
+            {
+                if (item is TaskWithSortDate task)
+                {
+                    colIndex = 1;
+                    rowIndex++;
+
+                    // Ajouter les valeurs des colonnes pour chaque ligne
+                    foreach (var column in dataGrid.Columns)
+                    {
+                        if (column is DataGridTextColumn textColumn)
+                        {
+                            if (textColumn.Binding is Binding binding)
+                            {
+                                var propertyPath = binding.Path.Path;
+                                var propertyInfo = task.GetType().GetProperty(propertyPath);
+
+                                if (propertyInfo != null)
+                                {
+                                    var value = propertyInfo.GetValue(task);
+
+                                    // Formater les dates
+                                    if (value is DateTime dateValue)
+                                    {
+                                        worksheet.Cell(rowIndex, colIndex).Value = dateValue;
+                                        worksheet.Cell(rowIndex, colIndex).Style.DateFormat.Format = "dd/MM/yyyy";
+                                    }
+                                    else if (value is DateTime?)
+                                    {
+                                        DateTime? nullableDateValue = value as DateTime?;
+                                        if (nullableDateValue.HasValue)
+                                        {
+                                            worksheet.Cell(rowIndex, colIndex).Value = nullableDateValue.Value;
+                                            worksheet.Cell(rowIndex, colIndex).Style.DateFormat.Format = "dd/MM/yyyy";
+                                        }
+                                        else
+                                        {
+                                            worksheet.Cell(rowIndex, colIndex).Value = "";
+                                        }
+                                    }
+                                    else
+                                    {
+                                        worksheet.Cell(rowIndex, colIndex).Value = value?.ToString() ?? "";
+                                    }
+                                }
+                            }
+
+                            colIndex++;
+                        }
+                    }
+                }
+            }
+
+            // Ajuster la largeur des colonnes
+            worksheet.Columns().AdjustToContents();
+
+            // Appliquer des bordures aux cellules
+            var range = worksheet.Range(1, 1, rowIndex, colIndex - 1);
+            range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
         }
     }
 }

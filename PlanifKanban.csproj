@@ -17,6 +17,7 @@
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="ExcelDataReader" Version="3.7.0" />
     <PackageReference Include="ExcelDataReader.DataSet" Version="3.7.0" />
+    <PackageReference Include="PdfSharp" Version="6.1.1" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.3" />
   </ItemGroup>
 

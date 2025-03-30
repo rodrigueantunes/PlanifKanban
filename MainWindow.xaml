@@ -23,24 +23,28 @@
         <!-- CollectionViewSource pour le tri -->
         <CollectionViewSource x:Key="TodoTasksViewSource" Source="{Binding TodoTasks}">
             <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="HasDueDate" Direction="Descending"/>
                 <scm:SortDescription PropertyName="DueDate" Direction="Ascending"/>
             </CollectionViewSource.SortDescriptions>
         </CollectionViewSource>
 
         <CollectionViewSource x:Key="InProgressTasksViewSource" Source="{Binding InProgressTasks}">
             <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="HasStartDate" Direction="Descending"/>
                 <scm:SortDescription PropertyName="StartDate" Direction="Ascending"/>
             </CollectionViewSource.SortDescriptions>
         </CollectionViewSource>
 
         <CollectionViewSource x:Key="TestingTasksViewSource" Source="{Binding TestingTasks}">
             <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="HasStartDate" Direction="Descending"/>
                 <scm:SortDescription PropertyName="StartDate" Direction="Ascending"/>
             </CollectionViewSource.SortDescriptions>
         </CollectionViewSource>
 
         <CollectionViewSource x:Key="DoneTasksViewSource" Source="{Binding DoneTasks}">
             <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="HasCompletionDate" Direction="Descending"/>
                 <scm:SortDescription PropertyName="CompletionDate" Direction="Ascending"/>
             </CollectionViewSource.SortDescriptions>
         </CollectionViewSource>

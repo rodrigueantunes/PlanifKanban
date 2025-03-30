@@ -723,28 +723,31 @@ namespace PlanifKanban
 
         private void ConfigureSorting()
         {
-            // Colonne À Faire : trier par date prévue puis par titre
+            // Colonne À Faire : trier d'abord par présence de date, puis par date au plus tôt
             ICollectionView todoView = CollectionViewSource.GetDefaultView(TodoList.ItemsSource);
             todoView.SortDescriptions.Clear();
-            todoView.SortDescriptions.Add(new SortDescription("HasDueDate", ListSortDirection.Descending)); // Trier d'abord les tâches avec date
-            todoView.SortDescriptions.Add(new SortDescription("DueDate", ListSortDirection.Ascending));      // Puis par date au plus tôt
-            todoView.SortDescriptions.Add(new SortDescription("Title", ListSortDirection.Ascending));        // Puis par titre
+            todoView.SortDescriptions.Add(new SortDescription("HasDueDate", ListSortDirection.Descending)); // Les tâches avec date en premier
+            todoView.SortDescriptions.Add(new SortDescription("DueDate", ListSortDirection.Ascending));     // Puis par date au plus tôt
+            todoView.SortDescriptions.Add(new SortDescription("Title", ListSortDirection.Ascending));       // Puis par titre
 
-            // Colonne En Cours : trier par date de début
+            // Colonne En Cours : même principe pour les dates de début
             ICollectionView inProgressView = CollectionViewSource.GetDefaultView(InProgressList.ItemsSource);
             inProgressView.SortDescriptions.Clear();
-            inProgressView.SortDescriptions.Add(new SortDescription("StartDate", ListSortDirection.Ascending));
+            inProgressView.SortDescriptions.Add(new SortDescription("HasStartDate", ListSortDirection.Descending)); // Tâches avec date de début en premier
+            inProgressView.SortDescriptions.Add(new SortDescription("StartDate", ListSortDirection.Ascending));      // Puis par date au plus tôt
             inProgressView.SortDescriptions.Add(new SortDescription("Title", ListSortDirection.Ascending));
 
-            // Colonne En Test : trier par date de début
+            // Colonne En Test : même principe
             ICollectionView testingView = CollectionViewSource.GetDefaultView(TestingList.ItemsSource);
             testingView.SortDescriptions.Clear();
+            testingView.SortDescriptions.Add(new SortDescription("HasStartDate", ListSortDirection.Descending));
             testingView.SortDescriptions.Add(new SortDescription("StartDate", ListSortDirection.Ascending));
             testingView.SortDescriptions.Add(new SortDescription("Title", ListSortDirection.Ascending));
 
-            // Colonne Terminée : trier par date de finalisation
+            // Colonne Terminée : même principe pour les dates de finalisation
             ICollectionView doneView = CollectionViewSource.GetDefaultView(DoneList.ItemsSource);
             doneView.SortDescriptions.Clear();
+            doneView.SortDescriptions.Add(new SortDescription("HasCompletionDate", ListSortDirection.Descending));
             doneView.SortDescriptions.Add(new SortDescription("CompletionDate", ListSortDirection.Ascending));
             doneView.SortDescriptions.Add(new SortDescription("Title", ListSortDirection.Ascending));
         }

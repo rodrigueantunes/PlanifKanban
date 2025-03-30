@@ -13,7 +13,6 @@ namespace PlanifKanban.Models
         public DateTime? DueDate { get; set; }
         public DateTime? RequestedDate { get; set; }
         public DateTime? CompletionDate { get; set; }
-
         public double PlannedTimeDays { get; set; }
         public double PlannedTimeHours { get; set; }
         public double ActualTimeDays { get; set; }
@@ -23,6 +22,24 @@ namespace PlanifKanban.Models
         public bool HasDueDate
         {
             get { return DueDate.HasValue; }
+        }
+
+        [XmlIgnore] // Ne pas sérialiser cette propriété calculée
+        public bool HasStartDate
+        {
+            get { return StartDate.HasValue; }
+        }
+
+        [XmlIgnore] // Ne pas sérialiser cette propriété calculée
+        public bool HasCompletionDate
+        {
+            get { return CompletionDate.HasValue; }
+        }
+
+        [XmlIgnore] // Ne pas sérialiser cette propriété calculée
+        public bool HasRequestedDate
+        {
+            get { return RequestedDate.HasValue; }
         }
     }
 }

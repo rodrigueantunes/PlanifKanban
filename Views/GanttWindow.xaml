@@ -3,8 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:PlanifKanban.Views"
         xmlns:conv="clr-namespace:PlanifKanban.Converters"
-        Title="Gantt des Tâches" Height="700" Width="1200" Background="#F8F9FA">
+        Title="Gantt des Tâches" Height="800" Width="1200" Background="#F8F9FA">
     <Window.Resources>
+        <!-- Convertisseur pour transformer l'index de ligne en position Y -->
+        <conv:RowIndexToPositionConverter x:Key="RowIndexToPositionConverter"/>
+
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
         <SolidColorBrush x:Key="PrimaryColor" Color="#3B7CD4"/>
         <SolidColorBrush x:Key="SecondaryColor" Color="#2C3E50"/>
         <SolidColorBrush x:Key="AccentColor" Color="#2ECC71"/>
@@ -12,12 +17,33 @@
         <SolidColorBrush x:Key="DangerColor" Color="#E74C3C"/>
 
         <Style x:Key="GanttTaskBarStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource WarningColor}"/>
             <Setter Property="CornerRadius" Value="5"/>
             <Setter Property="Margin" Value="0,5"/>
             <Setter Property="Opacity" Value="0.8"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{StaticResource SecondaryColor}"/>
+            <Style.Triggers>
+                <!-- Tâche en cours - Orange -->
+                <DataTrigger Binding="{Binding IsInProgress}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource WarningColor}"/>
+                </DataTrigger>
+                <!-- Tâche avec date prévue - Bleue (par défaut) -->
+                <DataTrigger Binding="{Binding IsInProgress}" Value="False">
+                    <Setter Property="Background" Value="{StaticResource PrimaryColor}"/>
+                </DataTrigger>
+                <!-- Tâche en surbrillance (quand la souris passe dessus) -->
+                <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                    <Setter Property="BorderBrush" Value="#FFFFFF"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="#666666" Direction="315" ShadowDepth="3" BlurRadius="5" Opacity="0.5"/>
+                        </Setter.Value>
+                    </Setter>
+                    <!-- La couleur de fond reste la même, mais on peut ajuster la luminosité -->
+                    <Setter Property="Opacity" Value="1.0"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
@@ -27,6 +53,28 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="5,3"/>
             <Setter Property="Margin" Value="10,0,0,0"/>
+        </Style>
+
+        <!-- Style pour les infos de tâche -->
+        <Style x:Key="TaskInfoStyle" TargetType="Border">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1,1,0,1"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Width" Value="300"/>
+            <Setter Property="Margin" Value="0,5"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                    <Setter Property="Background" Value="#F0F4F8"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
+                    <Setter Property="BorderThickness" Value="2,2,0,2"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="#666666" Direction="315" ShadowDepth="3" BlurRadius="5" Opacity="0.5"/>
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -38,91 +86,276 @@
         </Grid.RowDefinitions>
 
         <!-- Options d'affichage -->
-        <Border Grid.Row="0" Background="#F0F4F8" CornerRadius="8" Padding="15,10" Margin="20,20,20,10">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Échelle de temps" 
+        <Border Grid.Row="0" Background="#F0F4F8" CornerRadius="8" Padding="15,10" Margin="20,3,20,10">
+            <!-- Modifiez la StackPanel horizontale dans le Border des options d'affichage (ligne 175) -->
+            <Border Grid.Row="0" Background="#F0F4F8" CornerRadius="8" Padding="15,10" Margin="20,20,20,10">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Échelle de temps" 
+                   FontWeight="SemiBold" 
+                   Foreground="{StaticResource SecondaryColor}" 
+                   VerticalAlignment="Center" 
+                   Margin="0,0,10,0"/>
+
+                    <ComboBox x:Name="TimeScaleComboBox" 
+                  Style="{StaticResource ModernComboBoxStyle}"
+                  Width="120"
+                  SelectionChanged="TimeScaleComboBox_SelectionChanged">
+                        <ComboBoxItem Content="Jours" IsSelected="True"/>
+                        <ComboBoxItem Content="Semaines" />
+                        <ComboBoxItem Content="Mois" />
+                    </ComboBox>
+
+                    <CheckBox x:Name="ShowDescriptionCheckBox" 
+                  Content="Afficher la description" 
+                  Margin="20,0,0,0" 
+                  VerticalAlignment="Center"
+                  Foreground="{StaticResource SecondaryColor}"
+                  Checked="ShowDescriptionCheckBox_CheckedChanged"
+                  Unchecked="ShowDescriptionCheckBox_CheckedChanged">
+                        <CheckBox.Template>
+                            <!-- Template de CheckBox existant (pas de changement ici) -->
+                            <ControlTemplate TargetType="CheckBox">
+                                <StackPanel Orientation="Horizontal">
+                                    <Border x:Name="checkBoxBorder" 
+                                Width="18" Height="18" 
+                                BorderThickness="2" 
+                                BorderBrush="{StaticResource PrimaryColor}" 
+                                CornerRadius="3" 
+                                Background="White"
+                                VerticalAlignment="Center">
+                                        <Path x:Name="checkMark" 
+                                  Data="M1,5 L4,9 L9,1" 
+                                  Stroke="{StaticResource PrimaryColor}" 
+                                  StrokeThickness="2" 
+                                  Visibility="Collapsed"
+                                  VerticalAlignment="Center" 
+                                  HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <ContentPresenter Margin="8,0,0,0" 
+                                          VerticalAlignment="Center" 
+                                          HorizontalAlignment="Left" 
+                                          RecognizesAccessKey="True"/>
+                                </StackPanel>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="true">
+                                        <Setter TargetName="checkMark" Property="Visibility" Value="Visible"/>
+                                        <Setter TargetName="checkBoxBorder" Property="Background" Value="#E6F0FF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="true">
+                                        <Setter TargetName="checkBoxBorder" Property="BorderBrush" Value="#2980B9"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </CheckBox.Template>
+                    </CheckBox>
+
+                    <!-- Nouveau bouton Exporter Gantt -->
+                    <Button x:Name="ExportGanttButton"
+                Content="Exporter Gantt" 
+                Margin="20,0,0,0" 
+                Padding="10,5"
+                VerticalAlignment="Center"
+                Click="ExportGanttButton_Click"
+                Background="{StaticResource AccentColor}"
+                Foreground="White"
+                BorderThickness="0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                        <Button.Effect>
+                            <DropShadowEffect ShadowDepth="1" BlurRadius="3" Opacity="0.3" Direction="315"/>
+                        </Button.Effect>
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                          Margin="{TemplateBinding Padding}"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#27AE60"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter Property="Background" Value="#1E8449"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Structure du Gantt avec colonne d'info et échelle de temps -->
+        <Grid Grid.Row="1" Margin="20,0,20,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <!-- Colonne pour les infos de tâche -->
+                <ColumnDefinition Width="*"/>
+                <!-- Colonne pour l'échelle de temps -->
+            </Grid.ColumnDefinitions>
+
+            <!-- En-tête pour la colonne des infos -->
+            <Border Background="#F0F4F8" BorderBrush="#E0E0E0" BorderThickness="1,1,0,1">
+                <TextBlock Text="Client / Tâche" 
+                           Margin="10,5" 
                            FontWeight="SemiBold" 
-                           Foreground="{StaticResource SecondaryColor}" 
-                           VerticalAlignment="Center" 
-                           Margin="0,0,10,0"/>
+                           HorizontalAlignment="Left" 
+                           VerticalAlignment="Center"/>
+            </Border>
 
-                <ComboBox Name="TimeScaleComboBox" 
-                          Style="{StaticResource ModernComboBoxStyle}"
-                          Width="120"
-                          SelectionChanged="TimeScaleComboBox_SelectionChanged">
-                    <ComboBoxItem Content="Jours" IsSelected="True"/>
-                    <ComboBoxItem Content="Semaines" />
-                    <ComboBoxItem Content="Mois" />
-                </ComboBox>
-            </StackPanel>
-        </Border>
+            <!-- Échelle de temps -->
+            <Border Grid.Column="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="1">
+                <ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Disabled"
+                              x:Name="TimelineScrollViewer">
+                    <ItemsControl x:Name="TimeScaleItemsControl">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="50" Height="30" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
+                                    <TextBlock Text="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+        </Grid>
 
-        <!-- Échelle de temps -->
-        <Border Grid.Row="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" Margin="20,0,20,10">
-            <ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Disabled">
-                <ItemsControl Name="TimeScaleItemsControl">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Width="50" Height="30" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
-                                <TextBlock Text="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Border>
+        <!-- Zone de contenu du diagramme de Gantt -->
+        <Grid Grid.Row="2" Margin="20,0,20,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <!-- Colonne pour les infos de tâche -->
+                <ColumnDefinition Width="*"/>
+                <!-- Colonne pour les barres de Gantt -->
+            </Grid.ColumnDefinitions>
 
-        <!-- Gantt Tasks -->
-        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto" Margin="20,0,20,20">
-            <ItemsControl Name="GanttTasksItemsControl" 
-                          MouseDoubleClick="GanttTasksItemsControl_MouseDoubleClick">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Canvas/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Style="{StaticResource GanttTaskBarStyle}"
-                                Width="{Binding Duration}"
-                                ToolTipService.InitialShowDelay="0">
-                            <Border.ToolTip>
-                                <ToolTip>
+            <!-- Liste des tâches sur la gauche -->
+            <ScrollViewer x:Name="TaskInfoScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Canvas Width="300" Height="2000">
+                    <ItemsControl x:Name="TaskInfoItemsControl">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Top" Value="{Binding RowIndex, Converter={StaticResource RowIndexToPositionConverter}}"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource TaskInfoStyle}" Height="auto" MinHeight="40"
+                                        MouseEnter="TaskInfo_MouseEnter" 
+                                        MouseLeave="TaskInfo_MouseLeave"
+                                        MouseLeftButtonDown="TaskInfo_MouseDoubleClick">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Title}" FontWeight="Bold"/>
-                                        <TextBlock Text="{Binding Client}"/>
-                                        <TextBlock Text="{Binding Description}"/>
-                                        <TextBlock Text="{Binding StartDateDisplay}"/>
-                                        <TextBlock Text="{Binding DueDateDisplay}"/>
-                                        <TextBlock Text="{Binding RequestedDateDisplay}"/>
-                                        <TextBlock Text="{Binding PlannedTimeDisplay}"/>
+                                        <TextBlock Text="{Binding Client}" 
+                                                  FontWeight="Bold" 
+                                                  TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Title}" 
+                                                  TextTrimming="CharacterEllipsis"
+                                                  TextWrapping="Wrap"/>
                                     </StackPanel>
-                                </ToolTip>
-                            </Border.ToolTip>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding Title}" 
-                                           Foreground="White" 
-                                           FontWeight="SemiBold" 
-                                           Margin="5,2" 
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Grid.Column="1" 
-                                           Text="{Binding PlannedTimeDays, StringFormat={}{0:0.#} j}" 
-                                           Foreground="White" 
-                                           Margin="5,2,10,2"/>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Canvas>
+            </ScrollViewer>
+
+            <!-- Barres de Gantt sur la droite -->
+            <ScrollViewer Grid.Column="1" 
+                          HorizontalScrollBarVisibility="Visible" 
+                          VerticalScrollBarVisibility="Auto"
+                          x:Name="GanttScrollViewer"
+                          ScrollChanged="GanttScrollViewer_ScrollChanged">
+                <Grid>
+                    <!-- Utiliser un Canvas principal comme conteneur pour les tâches -->
+                    <Canvas x:Name="GanttCanvas" Width="10000" Height="2000">
+                        <ItemsControl x:Name="GanttTasksItemsControl" 
+                                     MouseDoubleClick="GanttTasksItemsControl_MouseDoubleClick">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="0"/>
+                                    <!-- Positionner verticalement en fonction du RowIndex -->
+                                    <Setter Property="Canvas.Top" Value="{Binding RowIndex, Converter={StaticResource RowIndexToPositionConverter}}"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Canvas>
+                                        <Border Style="{StaticResource GanttTaskBarStyle}"
+                                                Width="{Binding Duration}"
+                                                Canvas.Left="{Binding StartOffset}"
+                                                Height="auto"
+                                                MinHeight="30"
+                                                MouseEnter="GanttTask_MouseEnter"
+                                                MouseLeave="GanttTask_MouseLeave"
+                                                ToolTipService.InitialShowDelay="0">
+                                            <Border.ToolTip>
+                                                <ToolTip>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Title}" FontWeight="Bold"/>
+                                                        <TextBlock Text="{Binding Client}"/>
+                                                        <TextBlock Text="{Binding Description}"/>
+                                                        <TextBlock Text="{Binding StartDateDisplay}"/>
+                                                        <TextBlock Text="{Binding DueDateDisplay}"/>
+                                                        <TextBlock Text="{Binding RequestedDateDisplay}"/>
+                                                        <TextBlock Text="{Binding PlannedTimeDisplay}"/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </Border.ToolTip>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Title}" 
+                                                           Foreground="White" 
+                                                           FontWeight="SemiBold" 
+                                                           Margin="5,2" 
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="1" 
+                                                           Text="{Binding PlannedTimeDays, StringFormat={}{0:0.#} j}" 
+                                                           Foreground="White" 
+                                                           Margin="5,2,10,2"/>
+                                                <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+                                                           Text="{Binding Description}"
+                                                           Foreground="White"
+                                                           Margin="5,0,5,2"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Visibility="{Binding ElementName=ShowDescriptionCheckBox, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                            </Grid>
+                                        </Border>
+                                    </Canvas>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Canvas>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Window>

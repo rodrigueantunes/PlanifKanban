@@ -1,0 +1,39 @@
+﻿<Window x:Class="PlanifKanban.Views.DateSelectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sélectionner une date" Height="250" Width="300"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Sélectionnez une date à afficher" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,10"/>
+
+        <DatePicker x:Name="TargetDatePicker" 
+                    Grid.Row="1" 
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center"
+                    SelectedDate="{Binding Path=Today}"/>
+
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Margin="0,20,0,0">
+            <Button Content="OK" 
+                    Width="70" 
+                    Height="30" 
+                    Margin="0,0,10,0" 
+                    Click="OkButton_Click"/>
+            <Button Content="Annuler" 
+                    Width="70" 
+                    Height="30" 
+                    Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

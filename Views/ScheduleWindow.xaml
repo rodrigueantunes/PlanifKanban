@@ -190,24 +190,28 @@
                 <TextBlock Text="Options d'affichage" FontWeight="SemiBold" Foreground="{StaticResource SecondaryColor}" VerticalAlignment="Center" Margin="0,0,20,0"/>
 
                 <CheckBox Name="ShowTodoTasksCheckBox" 
-                          Content="Afficher les tâches à faire" 
-                          Margin="0,0,20,0"
-                          Style="{StaticResource ModernCheckBoxStyle}"
-                          IsChecked="False"
-                          Checked="ShowTodoTasksCheckBox_CheckedChanged" 
-                          Unchecked="ShowTodoTasksCheckBox_CheckedChanged"/>
+              Content="Afficher les tâches à faire" 
+              Margin="0,0,20,0"
+              Style="{StaticResource ModernCheckBoxStyle}"
+              IsChecked="False"
+              Checked="ShowTodoTasksCheckBox_CheckedChanged" 
+              Unchecked="ShowTodoTasksCheckBox_CheckedChanged"/>
 
                 <CheckBox Name="ShowCompletedTasksCheckBox" 
-                          Content="Afficher les tâches terminées" 
-                          Margin="0,0,20,0"
-                          Style="{StaticResource ModernCheckBoxStyle}"
-                          IsChecked="False"
-                          Checked="ShowCompletedTasksCheckBox_CheckedChanged" 
-                          Unchecked="ShowCompletedTasksCheckBox_CheckedChanged"/>
+              Content="Afficher les tâches terminées" 
+              Margin="0,0,20,0"
+              Style="{StaticResource ModernCheckBoxStyle}"
+              IsChecked="False"
+              Checked="ShowCompletedTasksCheckBox_CheckedChanged" 
+              Unchecked="ShowCompletedTasksCheckBox_CheckedChanged"/>
                 <Button Content="Afficher Gantt" 
-                        Click="OnShowGanttClick"
-                        Style="{StaticResource ModernFlatButton}"
-                        Margin="20,0,0,0"/>
+            Click="OnShowGanttClick"
+            Style="{StaticResource ModernFlatButton}"
+            Margin="20,0,10,0"/>
+                <Button Content="Exporter Excel" 
+            Click="OnExportExcelClick"
+            Style="{StaticResource ModernFlatButton}"
+            Margin="0,0,0,0"/>
             </StackPanel>
         </Border>
 
