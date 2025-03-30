@@ -116,8 +116,8 @@ Les tâches sont regroupées par colonne (`TodoTasks`, `InProgressTasks`, etc.)
 - [x] Vue Kanban interactive
 - [x] Ordonnancement avec tri dynamique
 - [x] Affichage Gantt par échelle
-- [ ] Export PDF des vues
-- [ ] Export Excel
+- [x] Export PDF des vues
+- [x] Export Excel
 
 ---
 
